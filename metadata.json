@@ -1,0 +1,7 @@
+{
+  "name": "Guaraní Renda - Learn Guaraní",
+  "description": "An interactive web application to learn the Guaraní language through lessons, exercises, and a progress tracker. Features a helpful mascot and a Spanish-Guaraní glossary powered by AI.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
