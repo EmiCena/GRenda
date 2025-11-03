@@ -154,7 +154,6 @@ Asegúrate de tener instalado:
 
 - **Python 3.11+** - [Descargar](https://www.python.org/downloads/)
 - **Node.js 18+** y npm - [Descargar](https://nodejs.org/)
-- **PostgreSQL 15+** - [Descargar](https://www.postgresql.org/download/)
 - **Git** - [Descargar](https://git-scm.com/)
 - **Google Gemini API Key** - [Obtener](https://makersuite.google.com/app/apikey)
 
