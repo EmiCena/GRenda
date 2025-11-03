@@ -121,8 +121,7 @@ Una plataforma **100% gratuita, accesible 24/7** con:
 | **pytest** | Testing backend |
 | **Jest** | Testing frontend |
 | **Git/GitHub** | Control de versiones |
-| **Vercel** | Deploy frontend |
-| **Railway** | Deploy backend + DB |
+
 
 ---
 
