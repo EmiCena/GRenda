@@ -1,46 +1,69 @@
 import React from 'react';
 
 interface DonutChartProps {
-    progress: number;
-    size?: number;
-    strokeWidth?: number;
+  percentage: number;
+  size?: number;
+  strokeWidth?: number;
+  color?: string;
+  label?: string;
+  subtitle?: string;
 }
 
-export const DonutChart: React.FC<DonutChartProps> = ({ progress, size = 150, strokeWidth = 15 }) => {
-    const radius = (size - strokeWidth) / 2;
-    const circumference = 2 * Math.PI * radius;
-    const offset = circumference - (progress / 100) * circumference;
+export const DonutChart: React.FC<DonutChartProps> = ({
+  percentage,
+  size = 140,
+  strokeWidth = 12,
+  color = '#3b82f6',
+  label,
+  subtitle,
+}) => {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = radius * 2 * Math.PI;
+  const offset = circumference - (percentage / 100) * circumference;
 
-    return (
-        <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
-            <svg width={size} height={size} className="transform -rotate-90">
-                <circle
-                    cx={size / 2}
-                    cy={size / 2}
-                    r={radius}
-                    strokeWidth={strokeWidth}
-                    className="stroke-secondary"
-                    fill="transparent"
-                />
-                <circle
-                    cx={size / 2}
-                    cy={size / 2}
-                    r={radius}
-                    strokeWidth={strokeWidth}
-                    className="stroke-primary"
-                    fill="transparent"
-                    strokeDasharray={circumference}
-                    strokeDashoffset={offset}
-                    strokeLinecap="round"
-                    style={{ transition: 'stroke-dashoffset 0.5s ease-out' }}
-                />
-            </svg>
-            <div className="absolute flex flex-col items-center justify-center">
-                <span className="text-3xl font-bold text-primary">
-                    {Math.round(progress)}%
-                </span>
-                <span className="text-sm text-muted-foreground">Completado</span>
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <div className="relative" style={{ width: size, height: size }}>
+        <svg width={size} height={size} className="transform -rotate-90">
+          {/* Círculo de fondo */}
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={strokeWidth}
+            className="text-secondary dark:text-muted"
+          />
+          {/* Círculo de progreso */}
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            fill="none"
+            stroke={color}
+            strokeWidth={strokeWidth}
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
+            strokeLinecap="round"
+            className="transition-all duration-700 ease-out"
+          />
+        </svg>
+        {/* Porcentaje en el centro */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-foreground">
+              {Math.round(percentage)}%
             </div>
+            {subtitle && (
+              <div className="text-xs text-muted-foreground">{subtitle}</div>
+            )}
+          </div>
         </div>
-    );
+      </div>
+      {label && (
+        <div className="text-sm font-medium text-muted-foreground">{label}</div>
+      )}
+    </div>
+  );
 };

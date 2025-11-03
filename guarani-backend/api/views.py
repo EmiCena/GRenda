@@ -2,20 +2,25 @@ from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.decorators import api_view, permission_classes
 from django.utils import timezone
 from django.conf import settings
 import google.generativeai as genai
 
-from .models import Lesson, UserProgress, Translation, ChatHistory
+from .models import Lesson, UserProgress, Translation, ChatHistory, Mascot, Achievement
 from .serializers import (
     LessonSerializer, 
     UserProgressSerializer, 
     TranslationSerializer, 
-    ChatHistorySerializer
+    ChatHistorySerializer,
+    MascotSerializer,
+    AchievementSerializer
 )
 
-# Configurar Gemini
-genai.configure(api_key=settings.GOOGLE_API_KEY)
+# Configurar Gemini (SOLO SI HAY API KEY)
+if hasattr(settings, 'GOOGLE_API_KEY') and settings.GOOGLE_API_KEY:
+    genai.configure(api_key=settings.GOOGLE_API_KEY)
+
 
 class LessonViewSet(viewsets.ModelViewSet):
     queryset = Lesson.objects.all()
@@ -27,6 +32,7 @@ class LessonViewSet(viewsets.ModelViewSet):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
             return [IsAdminUser()]
         return [IsAuthenticated()]
+
 
 class ProgressView(APIView):
     permission_classes = [IsAuthenticated]
@@ -60,8 +66,22 @@ class ProgressView(APIView):
             }
         )
         
+        # ⭐ DAR XP AL COMPLETAR LECCIÓN
+        if completed:
+            mascot, _ = Mascot.objects.get_or_create(user=request.user)
+            xp_earned = 50  # XP por lección completada
+            if score >= 90:
+                xp_earned = 75  # Bonus por excelencia
+            mascot.add_xp(xp_earned)
+            mascot.state = 'celebrating'
+            mascot.save()
+            
+            # Verificar logros
+            check_and_unlock_achievements(request.user)
+        
         serializer = UserProgressSerializer(progress)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 class TranslateView(APIView):
     permission_classes = [IsAuthenticated]
@@ -103,6 +123,7 @@ Guaraní translation:"""
         serializer = TranslationSerializer(translations, many=True)
         return Response(serializer.data)
 
+
 class ChatbotView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -140,3 +161,123 @@ class ChatbotView(APIView):
         chats = ChatHistory.objects.filter(user=request.user)[:20]
         serializer = ChatHistorySerializer(chats, many=True)
         return Response(serializer.data)
+
+
+class MascotView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """Obtener o crear la mascota del usuario"""
+        mascot, created = Mascot.objects.get_or_create(user=request.user)
+        
+        # Actualizar estado según última interacción
+        from datetime import timedelta
+        if timezone.now() - mascot.last_interaction > timedelta(days=2):
+            mascot.state = 'sleeping'
+            mascot.save()
+        elif mascot.state == 'sleeping':
+            mascot.state = 'happy'
+            mascot.save()
+        
+        serializer = MascotSerializer(mascot)
+        return Response(serializer.data)
+    
+    def patch(self, request):
+        """Actualizar mascota (nombre, estado)"""
+        mascot = Mascot.objects.get(user=request.user)
+        
+        name = request.data.get('name')
+        state = request.data.get('state')
+        
+        if name:
+            mascot.name = name
+        if state:
+            mascot.state = state
+        
+        mascot.save()
+        serializer = MascotSerializer(mascot)
+        return Response(serializer.data)
+
+
+class AchievementsView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        """Obtener logros del usuario"""
+        achievements = Achievement.objects.filter(user=request.user)
+        serializer = AchievementSerializer(achievements, many=True)
+        return Response(serializer.data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_xp(request):
+    """Agregar XP a la mascota (se llama al completar lecciones)"""
+    amount = request.data.get('amount', 0)
+    
+    if amount <= 0:
+        return Response({'error': 'Amount debe ser positivo'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    mascot, created = Mascot.objects.get_or_create(user=request.user)
+    leveled_up = mascot.add_xp(amount)
+    
+    # Verificar logros
+    check_and_unlock_achievements(request.user)
+    
+    return Response({
+        'mascot': MascotSerializer(mascot).data,
+        'leveled_up': leveled_up,
+        'message': f"¡Ganaste {amount} XP!" + (" ¡Subiste de nivel! 🎉" if leveled_up else "")
+    })
+
+
+def check_and_unlock_achievements(user):
+    """Verificar y desbloquear logros"""
+    # Logro: Primera lección
+    completed_count = UserProgress.objects.filter(user=user, completed=True).count()
+    if completed_count == 1:
+        Achievement.objects.get_or_create(
+            user=user,
+            achievement_type='first_lesson',
+            defaults={
+                'title': 'Primera Lección',
+                'description': '¡Completaste tu primera lección!',
+                'icon': '🎓'
+            }
+        )
+    
+    # Logro: 5 lecciones
+    if completed_count == 5:
+        Achievement.objects.get_or_create(
+            user=user,
+            achievement_type='five_lessons',
+            defaults={
+                'title': 'Estudiante Dedicado',
+                'description': '¡Completaste 5 lecciones!',
+                'icon': '📚'
+            }
+        )
+    
+    # Logro: 10 lecciones
+    if completed_count == 10:
+        Achievement.objects.get_or_create(
+            user=user,
+            achievement_type='ten_lessons',
+            defaults={
+                'title': 'Maestro del Guaraní',
+                'description': '¡Completaste 10 lecciones!',
+                'icon': '🏆'
+            }
+        )
+    
+    # Logro: Racha de 7 días
+    if user.streak_days >= 7:
+        Achievement.objects.get_or_create(
+            user=user,
+            achievement_type='week_streak',
+            defaults={
+                'title': 'Racha Semanal',
+                'description': '¡7 días seguidos practicando!',
+                'icon': '🔥'
+            }
+        )

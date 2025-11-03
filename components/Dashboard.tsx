@@ -1,111 +1,205 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useAppContext } from '../contexts/AppContext';
-import { generateMascotImage } from '../services/geminiService';
-import { DonutChart } from './charts/DonutChart';
 import { BarChart } from './charts/BarChart';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
-import { Progress } from '../types';
+import { DonutChart } from './charts/DonutChart';
+import { LineChart } from './charts/LineChart';
+import { ProgressChart } from './charts/ProgressChart';
+import { StatsCard } from './charts/StatsCard';
+import { MascotWidget } from './mascot/MascotWidget';
+import { AchievementsList } from './mascot/AchievementsList';
+import { View, Progress } from '../types';
 
-const Mascot = () => {
-    const [imageUrl, setImageUrl] = useState<string | null>(localStorage.getItem('guaraniRendaMascot'));
-    const [isLoading, setIsLoading] = useState<boolean>(!imageUrl);
+interface DashboardProps {
+  setView: (view: View) => void;
+}
 
-    useEffect(() => {
-        const fetchMascot = async () => {
-            if (!imageUrl) {
-                setIsLoading(true);
-                const generatedUrl = await generateMascotImage();
-                if (generatedUrl) {
-                    setImageUrl(generatedUrl);
-                    localStorage.setItem('guaraniRendaMascot', generatedUrl);
-                }
-                setIsLoading(false);
-            }
-        };
-        fetchMascot();
-    }, [imageUrl]);
+// Tipo auxiliar para las entradas de progreso
+type ProgressEntry = Progress[string];
 
-    if (isLoading) {
-        return (
-            <div className="bg-secondary rounded-full p-4 w-40 h-40 mx-auto flex items-center justify-center animate-pulse">
-            </div>
-        );
-    }
+export const Dashboard: React.FC<DashboardProps> = ({ setView }) => {
+  const { lessons, progress, user } = useAppContext();
 
-    if (imageUrl) {
-        return <img src={imageUrl} alt="Mascot" className="w-40 h-40 mx-auto object-contain" />;
-    }
+  // Calcular estadísticas con tipos seguros
+  const progressEntries = Object.entries(progress) as [string, ProgressEntry][];
+  
+  const completedLessons = progressEntries.filter(([_, p]) => p.completed).length;
+  const totalLessons = lessons.length;
+  
+  const averageScore = progressEntries.length > 0
+    ? Math.round(
+        progressEntries.reduce((sum, [_, p]) => sum + p.score, 0) / progressEntries.length
+      )
+    : 0;
     
-    // Fallback SVG
-    return (
-        <div className="bg-secondary rounded-full p-4 w-40 h-40 mx-auto flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-24 h-24 text-primary" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8z"></path>
-                <path d="M12 10.414c-1.33 0-2.58.5-3.536 1.464a5 5 0 0 0 7.072 0C14.58 10.914 13.33 10.414 12 10.414z"></path><circle cx="8.5" cy="8.5" r="1.5"></circle><circle cx="15.5" cy="8.5" r="1.5"></circle>
-            </svg>
+  const totalXP = user?.total_xp || 0;
+  const streak = user?.streak_days || 0;
+
+  // Datos para gráficos
+  const lessonsProgress = lessons.slice(0, 5).map(lesson => ({
+    label: lesson.title.split(' ')[0],
+    value: progress[lesson.id]?.score || 0,
+    max: 100,
+  }));
+
+  const weeklyProgress = [
+    { label: 'Lun', value: 75 },
+    { label: 'Mar', value: 85 },
+    { label: 'Mié', value: 70 },
+    { label: 'Jue', value: 90 },
+    { label: 'Vie', value: 80 },
+    { label: 'Sáb', value: 95 },
+    { label: 'Dom', value: 88 },
+  ];
+
+  const completionPercentage = totalLessons > 0 
+    ? (completedLessons / totalLessons) * 100 
+    : 0;
+
+  return (
+    <div className="min-h-screen bg-background py-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-foreground mb-2">
+            ¡Mba'éichapa, {user?.name}! 👋
+          </h1>
+          <p className="text-muted-foreground">
+            Tu progreso en el aprendizaje del Guaraní
+          </p>
         </div>
-    );
-};
 
-
-export const Dashboard: React.FC = () => {
-    const { user, progress, lessons } = useAppContext();
-    
-    // Fix: Explicitly type `p` because TypeScript might incorrectly infer it as `unknown`
-    // when using `Object.values` on a type with an index signature.
-    const completedLessons = Object.values(progress).filter((p: Progress[string]) => p.completed);
-    const completedLessonsCount = completedLessons.length;
-    const totalLessons = lessons.length;
-    const overallProgress = totalLessons > 0 ? (completedLessonsCount / totalLessons) * 100 : 0;
-    
-    const lessonScores = lessons
-        .filter(lesson => progress[lesson.id] && progress[lesson.id].completed)
-        .map(lesson => ({
-            label: lesson.title,
-            value: progress[lesson.id].score,
-        }));
-        
-    const encouragementMessages = [
-        "¡Rohayhu! (¡Te quiero!) ¡Sigue así!",
-        "¡Iporãiterei! (¡Muy bien!) Estás progresando mucho.",
-        "¡Ani nekane'õ! (¡No te canses!) El conocimiento es poder.",
-        "Cada palabra que aprendes es un paso más cerca de la fluidez."
-    ];
-
-    const message = encouragementMessages[completedLessonsCount % encouragementMessages.length];
-
-    return (
-        <div className="container mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
-            <div className="bg-card border border-border rounded-xl p-6">
-                <h1 className="text-3xl font-bold text-primary">Mba'éichapa, {user?.name}!</h1>
-                <p className="text-muted-foreground mt-2">¡Bienvenido de nuevo a tu aventura en Guaraní!</p>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-1 space-y-6">
-                    <Card>
-                        <CardHeader>
-                           <CardTitle className="text-xl text-primary/90">Progreso General</CardTitle>
-                        </CardHeader>
-                        <CardContent className="flex flex-col items-center justify-center text-center">
-                            <DonutChart progress={overallProgress} />
-                             <p className="mt-4 text-muted-foreground text-center">
-                               <span className="font-bold text-foreground">{completedLessonsCount}</span> de <span className="font-bold text-foreground">{totalLessons}</span> lecciones completadas.
-                            </p>
-                        </CardContent>
-                    </Card>
-                     <Card>
-                        <CardContent className="p-6 flex flex-col items-center justify-center text-center">
-                            <Mascot />
-                            <p className="mt-4 text-muted-foreground italic">{message}</p>
-                        </CardContent>
-                    </Card>
-                </div>
-                
-                <div className="lg:col-span-2">
-                   <BarChart data={lessonScores} title="Puntajes por Lección" />
-                </div>
-            </div>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <StatsCard
+            title="Lecciones Completadas"
+            value={`${completedLessons}/${totalLessons}`}
+            icon="📚"
+            color="bg-blue-500"
+            trend={{ value: 12, isPositive: true }}
+          />
+          
+          <StatsCard
+            title="Promedio de Puntaje"
+            value={`${averageScore}%`}
+            icon="⭐"
+            color="bg-yellow-500"
+            trend={{ value: 5, isPositive: true }}
+          />
+          
+          <StatsCard
+            title="Experiencia Total"
+            value={totalXP}
+            icon="🎯"
+            color="bg-purple-500"
+            trend={{ value: 8, isPositive: true }}
+          />
+          
+          <StatsCard
+            title="Racha de Días"
+            value={`${streak} días`}
+            icon="🔥"
+            color="bg-orange-500"
+          />
         </div>
-    );
+
+        {/* MASCOTA + GRÁFICOS PRINCIPALES */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          {/* Mascota Widget */}
+          <div className="lg:col-span-1">
+            <MascotWidget />
+          </div>
+
+          {/* Gráficos de progreso */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Progreso General (Donut) */}
+            <div className="bg-card border border-border rounded-lg p-6 shadow-sm">
+              <DonutChart
+                percentage={completionPercentage}
+                size={180}
+                color="#3b82f6"
+                label="Progreso General"
+                subtitle="Lecciones"
+              />
+            </div>
+
+            {/* Progreso por lección (Barras) */}
+            <div className="bg-card border border-border rounded-lg p-6 shadow-sm">
+              <BarChart
+                data={lessonsProgress}
+                title="Últimas Lecciones"
+                height={220}
+                color="bg-gradient-to-r from-blue-500 to-purple-500"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Progreso Semanal + Mini Stats */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Gráfico de línea semanal */}
+          <div className="bg-card border border-border rounded-lg p-6 shadow-sm">
+            <LineChart
+              data={weeklyProgress}
+              title="Progreso Semanal"
+              height={220}
+              color="#10b981"
+            />
+          </div>
+
+          {/* Progress bars */}
+          <div className="space-y-4">
+            <ProgressChart
+              title="Vocabulario Aprendido"
+              current={45}
+              total={100}
+              color="bg-green-500"
+              icon="📖"
+            />
+            <ProgressChart
+              title="Ejercicios Completados"
+              current={28}
+              total={50}
+              color="bg-blue-500"
+              icon="✍️"
+            />
+          </div>
+        </div>
+
+        {/* LOGROS */}
+        <div className="mb-8">
+          <AchievementsList />
+        </div>
+
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <button
+            onClick={() => setView('LESSONS')}
+            className="bg-primary hover:bg-primary/90 text-primary-foreground p-6 rounded-lg shadow-sm hover:shadow-md transition-all text-left group"
+          >
+            <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">📚</div>
+            <h3 className="text-lg font-semibold mb-1">Continuar Aprendiendo</h3>
+            <p className="text-sm opacity-90">Explora nuevas lecciones</p>
+          </button>
+
+          <button
+            onClick={() => setView('CHATBOT')}
+            className="bg-purple-500 hover:bg-purple-600 text-white p-6 rounded-lg shadow-sm hover:shadow-md transition-all text-left group"
+          >
+            <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">💬</div>
+            <h3 className="text-lg font-semibold mb-1">Practicar con Arami</h3>
+            <p className="text-sm opacity-90">Chatbot de conversación</p>
+          </button>
+
+          <button
+            onClick={() => setView('GLOSSARY')}
+            className="bg-green-500 hover:bg-green-600 text-white p-6 rounded-lg shadow-sm hover:shadow-md transition-all text-left group"
+          >
+            <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">📝</div>
+            <h3 className="text-lg font-semibold mb-1">Glosario</h3>
+            <p className="text-sm opacity-90">Traduce palabras</p>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 };

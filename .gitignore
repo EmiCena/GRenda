@@ -1,0 +1,268 @@
+# ============================================
+# GUARANÍ RENDA - .gitignore Principal
+# ============================================
+
+# ====================================
+# BACKEND - PYTHON/DJANGO
+# ====================================
+
+# Entorno virtual Python
+venv/
+env/
+ENV/
+.venv/
+.env/
+*.venv
+
+# Python
+*.py[cod]
+*$py.class
+*.so
+.Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+*.log
+*.pot
+*.mo
+
+# Django
+*.sqlite3
+*.db
+db.sqlite3
+db.sqlite3-journal
+/media
+/staticfiles
+/static
+local_settings.py
+celerybeat-schedule
+
+# Migraciones específicas (opcional - algunos las commitean)
+# */migrations/*.py
+# !*/migrations/__init__.py
+
+# ====================================
+# FRONTEND - REACT/NODE.JS
+# ====================================
+
+# Node modules
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build de producción
+dist/
+build/
+out/
+
+# Caché
+.cache/
+.parcel-cache/
+.vite/
+.next/
+.nuxt/
+.eslintcache
+
+# Testing
+coverage/
+*.lcov
+
+# ====================================
+# VARIABLES DE ENTORNO
+# ====================================
+
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+.env.*
+!.env.example
+
+# ====================================
+# IDEs y EDITORES
+# ====================================
+
+# VSCode
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# PyCharm
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+.*.sw[a-p]
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# ====================================
+# SISTEMA OPERATIVO
+# ====================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.directory
+.Trash-*
+
+# ====================================
+# LOGS y TEMPORALES
+# ====================================
+
+logs/
+*.log
+log/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# ====================================
+# TESTING y COBERTURA
+# ====================================
+
+# Python testing
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# JavaScript testing
+coverage/
+.nyc_output/
+jest-coverage/
+
+# ====================================
+# COMPILADOS y CACHE
+# ====================================
+
+# Python
+*.pyc
+__pycache__/
+*.so
+
+# JavaScript
+*.tsbuildinfo
+
+# ====================================
+# DEPENDENCIAS
+# ====================================
+
+# Python
+pip-log.txt
+pip-delete-this-directory.txt
+.Python
+
+# JavaScript
+package-lock.json  # Solo si usas yarn
+yarn.lock          # Solo si usas npm
+pnpm-lock.yaml     # Solo si usas yarn/npm
+
+# ====================================
+# ARCHIVOS DE PROYECTO ESPECÍFICOS
+# ====================================
+
+# Backups
+*.bak
+*.backup
+*.old
+*.orig
+
+# Archivos de configuración local
+config.local.json
+settings.local.py
+
+# Datos de desarrollo/prueba
+mock_data/
+test_files/
+sample_data/
+
+# Documentación generada
+docs/_build/
+site/
+
+# ====================================
+# SEGURIDAD
+# ====================================
+
+# Llaves y certificados
+*.pem
+*.key
+*.cert
+*.crt
+*.p12
+secrets.json
+credentials.json
+
+# ====================================
+# OTROS
+# ====================================
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+*.ipynb
+
+# Archivos comprimidos
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# Archivos temporales de Office
+~$*
+*.tmp
