@@ -147,7 +147,7 @@ class TranslateView(APIView):
             return Response({'error': 'Texto vacío'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            model = genai.GenerativeModel('gemini-2.0-flash-exp')
+            model = genai.GenerativeModel('gemini-2.5-flash')
             prompt = f"""Translate the following Spanish word or phrase to Guaraní. 
 Provide ONLY the Guaraní translation.
 
@@ -244,7 +244,7 @@ class ChatbotView(APIView):
             
             # Generar respuesta con Gemini
             model = genai.GenerativeModel(
-                'gemini-2.0-flash-exp',
+                'gemini-2.5-flash',
                 system_instruction=system_instruction
             )
             
