@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from datetime import timedelta
 from dotenv import load_dotenv
-
+from datetime import timedelta
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -106,10 +106,10 @@ REST_FRAMEWORK = {
 
 # JWT Settings
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': True,
-    'BLACKLIST_AFTER_ROTATION': False,
+    'BLACKLIST_AFTER_ROTATION': True,
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
@@ -118,3 +118,4 @@ GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
 
 # Modelo de Usuario personalizado (opcional)
 AUTH_USER_MODEL = 'users.User'
+

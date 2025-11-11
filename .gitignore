@@ -8,10 +8,10 @@
 
 # Entorno virtual Python
 venv/
-env/
-ENV/
+
+
 .venv/
-.env/
+
 *.venv
 
 # Python

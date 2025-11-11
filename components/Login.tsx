@@ -1,89 +1,284 @@
+// src/components/Login.tsx (REEMPLAZAR COMPLETO)
+
 import React, { useState } from 'react';
+import { apiLogin, apiRegister } from '../services/api';
 import { useAppContext } from '../contexts/AppContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/Card';
 import { Input } from './ui/Input';
-import { Label } from './ui/Label';
 import { Button } from './ui/Button';
+import { Label } from './ui/Label';
+
+type FormMode = 'login' | 'register';
 
 export const Login: React.FC = () => {
-  const [name, setName] = useState('');
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const { login } = useAppContext();
+  const [mode, setMode] = useState<FormMode>('login');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  
+  // Login form
+  const [loginData, setLoginData] = useState({
+    username: '',
+    password: '',
+  });
+  
+  // Register form
+  const [registerData, setRegisterData] = useState({
+    username: '',
+    email: '',
+    password: '',
+    password2: '',
+    first_name: '',
+    last_name: '',
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!name.trim()) {
-      setError('Por favor ingresa tu nombre');
-      return;
-    }
-
     setError('');
     setIsLoading(true);
 
     try {
-      await login(name.trim());
+      await login(loginData);
     } catch (err: any) {
-      console.error('Error en login:', err);
       setError(err.message || 'Error al iniciar sesión');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    // Validaciones frontend
+    if (registerData.password !== registerData.password2) {
+      setError('Las contraseñas no coinciden');
+      return;
+    }
+
+    if (registerData.password.length < 8) {
+      setError('La contraseña debe tener al menos 8 caracteres');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const result = await apiRegister(registerData);
+      
+      // Auto-login después del registro
+      await login({
+        username: registerData.username,
+        password: registerData.password,
+      });
+    } catch (err: any) {
+      setError(err.message || 'Error al crear cuenta');
+    } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-secondary/10 flex items-center justify-center p-4">
+      <Card className="w-full max-w-md shadow-2xl">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl text-primary">
-            Bienvenido a Guaraní Renda
+          <div className="text-6xl mb-4">🦫</div>
+          <CardTitle className="text-3xl font-bold text-primary">
+            Guaraní Renda
           </CardTitle>
           <CardDescription>
-            Tu lugar para aprender Guaraní.
+            {mode === 'login' 
+              ? 'Inicia sesión para continuar aprendiendo' 
+              : 'Crea una cuenta para comenzar tu viaje'}
           </CardDescription>
         </CardHeader>
+
         <CardContent>
-          <form className="space-y-6" onSubmit={handleSubmit}>
-            {error && (
-              <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded text-sm">
-                {error}
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="name">Nombre</Label>
-              <Input
-                id="name"
-                name="name"
-                type="text"
-                required
-                placeholder="Escribe tu nombre para empezar"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                disabled={isLoading}
-                autoFocus
-              />
-            </div>
-
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isLoading || !name.trim()}
+          {/* Tabs */}
+          <div className="flex gap-2 mb-6">
+            <button
+              onClick={() => {
+                setMode('login');
+                setError('');
+              }}
+              className={`flex-1 py-2 rounded-lg transition-colors ${
+                mode === 'login'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-secondary hover:bg-secondary/80'
+              }`}
             >
-              {isLoading && (
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-              )}
-              {isLoading ? 'Entrando...' : 'Entrar'}
-            </Button>
+              Iniciar Sesión
+            </button>
+            <button
+              onClick={() => {
+                setMode('register');
+                setError('');
+              }}
+              className={`flex-1 py-2 rounded-lg transition-colors ${
+                mode === 'register'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-secondary hover:bg-secondary/80'
+              }`}
+            >
+              Registrarse
+            </button>
+          </div>
 
-            <p className="text-xs text-center text-muted-foreground">
-              Solo ingresa tu nombre y presiona Entrar.<br />
-              Se creará tu cuenta automáticamente.
-            </p>
-          </form>
+          {/* Error Message */}
+          {error && (
+            <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+              <p className="text-sm text-destructive whitespace-pre-line">{error}</p>
+            </div>
+          )}
+
+          {/* Login Form */}
+          {mode === 'login' && (
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <Label htmlFor="login-username">Usuario</Label>
+                <Input
+                  id="login-username"
+                  type="text"
+                  value={loginData.username}
+                  onChange={(e) => setLoginData({ ...loginData, username: e.target.value })}
+                  placeholder="tu_usuario"
+                  required
+                  autoComplete="username"
+                  disabled={isLoading}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="login-password">Contraseña</Label>
+                <Input
+                  id="login-password"
+                  type="password"
+                  value={loginData.password}
+                  onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+                  placeholder="••••••••"
+                  required
+                  autoComplete="current-password"
+                  disabled={isLoading}
+                />
+              </div>
+
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={isLoading || !loginData.username || !loginData.password}
+              >
+                {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+              </Button>
+            </form>
+          )}
+
+          {/* Register Form */}
+          {mode === 'register' && (
+            <form onSubmit={handleRegister} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="reg-firstname">Nombre *</Label>
+                  <Input
+                    id="reg-firstname"
+                    type="text"
+                    value={registerData.first_name}
+                    onChange={(e) => setRegisterData({ ...registerData, first_name: e.target.value })}
+                    placeholder="Juan"
+                    required
+                    disabled={isLoading}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="reg-lastname">Apellido</Label>
+                  <Input
+                    id="reg-lastname"
+                    type="text"
+                    value={registerData.last_name}
+                    onChange={(e) => setRegisterData({ ...registerData, last_name: e.target.value })}
+                    placeholder="Pérez"
+                    disabled={isLoading}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="reg-username">Usuario *</Label>
+                <Input
+                  id="reg-username"
+                  type="text"
+                  value={registerData.username}
+                  onChange={(e) => setRegisterData({ ...registerData, username: e.target.value })}
+                  placeholder="juanperez"
+                  required
+                  autoComplete="username"
+                  disabled={isLoading}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="reg-email">Correo Electrónico *</Label>
+                <Input
+                  id="reg-email"
+                  type="email"
+                  value={registerData.email}
+                  onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
+                  placeholder="juan@ejemplo.com"
+                  required
+                  autoComplete="email"
+                  disabled={isLoading}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="reg-password">Contraseña *</Label>
+                <Input
+                  id="reg-password"
+                  type="password"
+                  value={registerData.password}
+                  onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
+                  placeholder="Mínimo 8 caracteres"
+                  required
+                  autoComplete="new-password"
+                  disabled={isLoading}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="reg-password2">Confirmar Contraseña *</Label>
+                <Input
+                  id="reg-password2"
+                  type="password"
+                  value={registerData.password2}
+                  onChange={(e) => setRegisterData({ ...registerData, password2: e.target.value })}
+                  placeholder="Repite la contraseña"
+                  required
+                  autoComplete="new-password"
+                  disabled={isLoading}
+                />
+              </div>
+
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={
+                  isLoading || 
+                  !registerData.username || 
+                  !registerData.email || 
+                  !registerData.password || 
+                  !registerData.password2 ||
+                  !registerData.first_name
+                }
+              >
+                {isLoading ? 'Creando cuenta...' : 'Crear Cuenta'}
+              </Button>
+            </form>
+          )}
+
+          {/* Footer */}
+          <div className="mt-6 text-center text-sm text-muted-foreground">
+            <p>Al continuar, aceptas nuestros términos de servicio</p>
+          </div>
         </CardContent>
       </Card>
     </div>

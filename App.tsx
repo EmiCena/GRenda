@@ -6,7 +6,7 @@ import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
 import { LessonView } from './components/LessonView';
 import { Glossary } from './components/Glossary';
-import { Chatbot } from './components/Chatbot';
+import { ChatbotImproved } from './components/chatbot/ChatbotImproved';
 import { Footer } from './components/Footer';
 import { AdminView } from './components/admin/AdminView';
 
@@ -32,18 +32,18 @@ const AppContent: React.FC = () => {
   const renderView = () => {
     switch (view) {
       case 'DASHBOARD':
-        return <Dashboard />;
+        return <Dashboard setView={setView} />;  // ✅ AGREGADO
       case 'LESSONS':
-        return <LessonView />;
+        return <LessonView setView={setView} />;  // ✅ Si LessonView también lo necesita
       case 'GLOSSARY':
-        return <Glossary />;
+        return <Glossary setView={setView} />;  // ✅ Si Glossary también lo necesita
       case 'CHATBOT':
-        return <Chatbot />;
+        return <ChatbotImproved />;  // ✅ Si Chatbot también lo necesita
       case 'ADMIN':
-        return user.role === 'admin' ? <AdminView /> : <Dashboard />;
-      case 'PROFILE': // This view is in types.ts but has no component. Default to dashboard.
+        return user.role === 'admin' ? <AdminView setView={setView} /> : <Dashboard setView={setView} />;
+      case 'PROFILE':
       default:
-        return <Dashboard />;
+        return <Dashboard setView={setView} />;  // ✅ AGREGADO
     }
   };
 

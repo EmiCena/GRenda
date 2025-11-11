@@ -10,6 +10,7 @@ import {
   Progress,
 } from '../types';
 import { generateSpeech } from '../services/geminiService';
+import { apiUpdateProgressWithResults, ExerciseResultData } from '../services/api';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/Card';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
@@ -73,19 +74,22 @@ const TextToSpeechButton: React.FC<{ textToRead: string }> = ({ textToRead }) =>
   );
 };
 
-
 // --- Exercise Components ---
 
-const MultipleChoiceComponent: React.FC<{ exercise: MultipleChoiceExercise; onAnswer: (isCorrect: boolean) => void }> = ({ exercise, onAnswer }) => {
+const MultipleChoiceComponent: React.FC<{ 
+  exercise: MultipleChoiceExercise; 
+  onAnswer: (isCorrect: boolean, userAnswer: string) => void 
+}> = ({ exercise, onAnswer }) => {
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<'correct' | 'incorrect' | null>(null);
 
   const handleSubmit = () => {
     if (selectedOption === null) return;
     const isCorrect = selectedOption === exercise.correctAnswerIndex;
+    const userAnswer = exercise.options[selectedOption];
     setFeedback(isCorrect ? 'correct' : 'incorrect');
     setTimeout(() => {
-      onAnswer(isCorrect);
+      onAnswer(isCorrect, userAnswer);
       setSelectedOption(null);
       setFeedback(null);
     }, 1500);
@@ -96,15 +100,15 @@ const MultipleChoiceComponent: React.FC<{ exercise: MultipleChoiceExercise; onAn
     const isCorrect = index === exercise.correctAnswerIndex;
     let baseClass = 'w-full justify-start p-4 h-auto text-base border-2 rounded-lg';
 
-    if (feedback) { // After submission
+    if (feedback) {
         if (isCorrect) {
             return `${baseClass} bg-green-500/20 border-green-500 text-foreground`;
         }
         if (isSelected && !isCorrect) {
             return `${baseClass} bg-red-500/20 border-red-500 text-foreground`;
         }
-        return `${baseClass} border-transparent bg-secondary/80 text-muted-foreground`; // other options
-    } else { // Before submission
+        return `${baseClass} border-transparent bg-secondary/80 text-muted-foreground`;
+    } else {
         if (isSelected) {
             return `${baseClass} bg-primary/20 border-primary`;
         }
@@ -132,7 +136,10 @@ const MultipleChoiceComponent: React.FC<{ exercise: MultipleChoiceExercise; onAn
   );
 };
 
-const TranslationComponent: React.FC<{ exercise: TranslationExercise; onAnswer: (isCorrect: boolean) => void }> = ({ exercise, onAnswer }) => {
+const TranslationComponent: React.FC<{ 
+  exercise: TranslationExercise; 
+  onAnswer: (isCorrect: boolean, userAnswer: string) => void 
+}> = ({ exercise, onAnswer }) => {
   const [answer, setAnswer] = useState('');
   const [feedback, setFeedback] = useState<'correct' | 'incorrect' | null>(null);
 
@@ -141,7 +148,7 @@ const TranslationComponent: React.FC<{ exercise: TranslationExercise; onAnswer: 
     const isCorrect = answer.trim().toLowerCase() === exercise.correctAnswer.toLowerCase();
     setFeedback(isCorrect ? 'correct' : 'incorrect');
     setTimeout(() => {
-      onAnswer(isCorrect);
+      onAnswer(isCorrect, answer.trim());
       setAnswer('');
       setFeedback(null);
     }, 2500);
@@ -183,7 +190,10 @@ const TranslationComponent: React.FC<{ exercise: TranslationExercise; onAnswer: 
   );
 };
 
-const FillInTheBlankComponent: React.FC<{ exercise: FillInTheBlankExercise; onAnswer: (isCorrect: boolean) => void }> = ({ exercise, onAnswer }) => {
+const FillInTheBlankComponent: React.FC<{ 
+  exercise: FillInTheBlankExercise; 
+  onAnswer: (isCorrect: boolean, userAnswer: string) => void 
+}> = ({ exercise, onAnswer }) => {
   const [answer, setAnswer] = useState('');
   const [feedback, setFeedback] = useState<'correct' | 'incorrect' | null>(null);
 
@@ -192,7 +202,7 @@ const FillInTheBlankComponent: React.FC<{ exercise: FillInTheBlankExercise; onAn
     const isCorrect = answer.trim().toLowerCase() === exercise.correctAnswer.toLowerCase();
     setFeedback(isCorrect ? 'correct' : 'incorrect');
     setTimeout(() => {
-      onAnswer(isCorrect);
+      onAnswer(isCorrect, answer.trim());
       setAnswer('');
       setFeedback(null);
     }, 2500);
@@ -210,7 +220,7 @@ const FillInTheBlankComponent: React.FC<{ exercise: FillInTheBlankExercise; onAn
       <div className="text-2xl font-bold mb-6 p-4 bg-secondary rounded-lg text-center flex items-center justify-center flex-wrap gap-2">
         <span>{sentenceParts[0]}</span>
         <Input type="text" value={answer} onChange={e => setAnswer(e.target.value)} disabled={!!feedback} placeholder="..."
-          className="h-auto p-1 border-b-2 bg-transparent text-center focus:ring-0" style={{ width: `${Math.max(10, exercise.correctAnswer.length)}ch` }} />
+          className="h-auto p-1 border-b-2 text-center focus:ring-0" style={{ width: `${Math.max(10, exercise.correctAnswer.length)}ch` }} />
         <span>{sentenceParts[1]}</span>
       </div>
 
@@ -239,7 +249,10 @@ const FillInTheBlankComponent: React.FC<{ exercise: FillInTheBlankExercise; onAn
   );
 };
 
-const ExerciseRenderer: React.FC<{ exercise: AnyExercise; onAnswer: (isCorrect: boolean) => void }> = ({ exercise, onAnswer }) => {
+const ExerciseRenderer: React.FC<{ 
+  exercise: AnyExercise; 
+  onAnswer: (isCorrect: boolean, userAnswer: string) => void 
+}> = ({ exercise, onAnswer }) => {
   switch (exercise.type) {
     case ExerciseType.MULTIPLE_CHOICE:
       return <MultipleChoiceComponent exercise={exercise} onAnswer={onAnswer} />;
@@ -252,10 +265,16 @@ const ExerciseRenderer: React.FC<{ exercise: AnyExercise; onAnswer: (isCorrect: 
   }
 };
 
-const LessonPractice: React.FC<{ lesson: Lesson; onComplete: (score: number) => void; onBack: () => void; }> = ({ lesson, onComplete, onBack }) => {
+const LessonPractice: React.FC<{ 
+  lesson: Lesson; 
+  onComplete: (score: number) => void; 
+  onBack: () => void; 
+}> = ({ lesson, onComplete, onBack }) => {
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [correctAnswers, setCorrectAnswers] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
+  const [exerciseResults, setExerciseResults] = useState<ExerciseResultData[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
 
   if (lesson.exercises.length === 0) {
     return (
@@ -266,10 +285,38 @@ const LessonPractice: React.FC<{ lesson: Lesson; onComplete: (score: number) => 
     );
   }
 
-  const handleAnswer = (isCorrect: boolean) => {
+  // Helper para obtener la respuesta correcta de un ejercicio
+  const getCorrectAnswer = (exercise: AnyExercise): string => {
+    switch (exercise.type) {
+      case ExerciseType.MULTIPLE_CHOICE:
+        return exercise.options[exercise.correctAnswerIndex];
+      case ExerciseType.TRANSLATION:
+        return exercise.correctAnswer;
+      case ExerciseType.FILL_IN_THE_BLANK:
+        return exercise.correctAnswer;
+      default:
+        return '';
+    }
+  };
+
+  const handleAnswer = (isCorrect: boolean, userAnswer: string) => {
+    const currentExercise = lesson.exercises[currentExerciseIndex];
+    
+    // Guardar resultado detallado
+    const result: ExerciseResultData = {
+      exercise_id: currentExercise.id,
+      exercise_type: currentExercise.type,
+      is_correct: isCorrect,
+      user_answer: userAnswer,
+      correct_answer: getCorrectAnswer(currentExercise),
+    };
+    
+    setExerciseResults(prev => [...prev, result]);
+    
     if (isCorrect) {
       setCorrectAnswers(prev => prev + 1);
     }
+    
     const nextIndex = currentExerciseIndex + 1;
     if (nextIndex < lesson.exercises.length) {
       setCurrentExerciseIndex(nextIndex);
@@ -281,6 +328,24 @@ const LessonPractice: React.FC<{ lesson: Lesson; onComplete: (score: number) => 
   if (isFinished) {
     const totalQuestions = lesson.exercises.length;
     const score = Math.round((correctAnswers / totalQuestions) * 100);
+    
+    const completeLesson = async () => {
+      setIsSaving(true);
+      try {
+        await apiUpdateProgressWithResults(lesson.id, {
+          score,
+          completed: true,
+          exercise_results: exerciseResults,
+        });
+        onComplete(score);
+      } catch (error) {
+        console.error('Error saving progress:', error);
+        alert('Hubo un error al guardar tu progreso. Inténtalo de nuevo.');
+      } finally {
+        setIsSaving(false);
+      }
+    };
+    
     return (
       <div className="container mx-auto p-4 sm:p-6 lg:p-8 flex items-center justify-center h-full">
         <Card className="max-w-md mx-auto text-center">
@@ -292,10 +357,38 @@ const LessonPractice: React.FC<{ lesson: Lesson; onComplete: (score: number) => 
                     Has respondido correctamente a <span className="font-bold text-foreground">{correctAnswers}</span> de <span className="font-bold text-foreground">{totalQuestions}</span> preguntas.
                 </p>
                 <div className="my-6 text-5xl font-bold text-primary">{score}%</div>
+                
+                {/* Desglose por tipo de ejercicio */}
+                <div className="mt-4 text-left space-y-2">
+                  <p className="text-sm font-semibold text-muted-foreground">Desglose:</p>
+                  {['MULTIPLE_CHOICE', 'TRANSLATION', 'FILL_IN_THE_BLANK'].map(type => {
+                    const typeResults = exerciseResults.filter(r => r.exercise_type === type);
+                    if (typeResults.length === 0) return null;
+                    const correct = typeResults.filter(r => r.is_correct).length;
+                    const typeName = {
+                      MULTIPLE_CHOICE: 'Opción Múltiple',
+                      TRANSLATION: 'Traducción',
+                      FILL_IN_THE_BLANK: 'Completar'
+                    }[type];
+                    return (
+                      <div key={type} className="flex justify-between text-sm">
+                        <span>{typeName}:</span>
+                        <span className="font-semibold">{correct}/{typeResults.length}</span>
+                      </div>
+                    );
+                  })}
+                </div>
             </CardContent>
             <CardFooter>
-                 <Button onClick={() => onComplete(score)} className="w-full">
-                    Continuar
+                 <Button onClick={completeLesson} className="w-full" disabled={isSaving}>
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Guardando...
+                      </>
+                    ) : (
+                      'Continuar'
+                    )}
                 </Button>
             </CardFooter>
         </Card>

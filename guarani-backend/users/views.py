@@ -1,83 +1,150 @@
-from rest_framework import generics, status
+# users/views.py (CREAR)
+
+from rest_framework import status
+from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.views import APIView
-from rest_framework.decorators import api_view, permission_classes
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError
 from django.contrib.auth import get_user_model
-from .serializers import RegisterSerializer, UserSerializer
+
+from .serializers import RegisterSerializer, LoginSerializer, UserProfileSerializer
+from api.models import Mascot
 
 User = get_user_model()
 
-class RegisterView(generics.CreateAPIView):
-    queryset = User.objects.all()
-    permission_classes = (AllowAny,)
-    serializer_class = RegisterSerializer
 
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = serializer.save()
+class RegisterView(APIView):
+    """Registro de nuevos usuarios"""
+    permission_classes = [AllowAny]
+    
+    def post(self, request):
+        serializer = RegisterSerializer(data=request.data)
         
-        refresh = RefreshToken.for_user(user)
+        if serializer.is_valid():
+            user = serializer.save()
+            
+            # Crear mascota automáticamente para el nuevo usuario
+            Mascot.objects.get_or_create(
+                user=user,
+                defaults={'name': 'Tatú'}
+            )
+            
+            # Generar tokens JWT
+            refresh = RefreshToken.for_user(user)
+            
+            return Response({
+                'user': UserProfileSerializer(user).data,
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
+                'message': '¡Cuenta creada exitosamente!'
+            }, status=status.HTTP_201_CREATED)
         
-        return Response({
-            'user': UserSerializer(user).data,
-            'refresh': str(refresh),
-            'access': str(refresh.access_token),
-        }, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class UserProfileView(generics.RetrieveUpdateAPIView):
-    permission_classes = (IsAuthenticated,)
-    serializer_class = UserSerializer
 
-    def get_object(self):
-        return self.request.user
+class LoginView(APIView):
+    """Login con username y password"""
+    permission_classes = [AllowAny]
+    
+    def post(self, request):
+        serializer = LoginSerializer(
+            data=request.data,
+            context={'request': request}
+        )
+        
+        if serializer.is_valid():
+            user = serializer.validated_data['user']
+            
+            # Generar tokens JWT
+            refresh = RefreshToken.for_user(user)
+            
+            return Response({
+                'user': UserProfileSerializer(user).data,
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
+                'message': '¡Bienvenido de vuelta!'
+            }, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class LogoutView(APIView):
-    permission_classes = (IsAuthenticated,)
-
+    """Logout - invalida el refresh token"""
+    permission_classes = [IsAuthenticated]
+    
     def post(self, request):
         try:
-            refresh_token = request.data.get("refresh")
+            refresh_token = request.data.get('refresh')
             if refresh_token:
                 token = RefreshToken(refresh_token)
                 token.blacklist()
-            return Response({"message": "Sesión cerrada correctamente"}, status=status.HTTP_200_OK)
-        except Exception:
-            return Response({"message": "Sesión cerrada"}, status=status.HTTP_200_OK)
+            
+            return Response({
+                'message': 'Sesión cerrada exitosamente.'
+            }, status=status.HTTP_200_OK)
+        except TokenError:
+            return Response({
+                'error': 'Token inválido o ya expirado.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({
+                'error': 'Error al cerrar sesión.'
+            }, status=status.HTTP_400_BAD_REQUEST)
 
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def quick_login(request):
-    """Login rápido solo con nombre (para desarrollo/demo)"""
-    name = request.data.get('name')
+
+class ProfileView(APIView):
+    """Obtener y actualizar perfil del usuario"""
+    permission_classes = [IsAuthenticated]
     
-    if not name:
-        return Response({'error': 'El nombre es requerido'}, status=status.HTTP_400_BAD_REQUEST)
+    def get(self, request):
+        serializer = UserProfileSerializer(request.user)
+        return Response(serializer.data)
     
-    # Limpiar el nombre para username
-    username = name.strip().replace(' ', '_').lower()
+    def patch(self, request):
+        serializer = UserProfileSerializer(
+            request.user,
+            data=request.data,
+            partial=True
+        )
+        
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ChangePasswordView(APIView):
+    """Cambiar contraseña del usuario"""
+    permission_classes = [IsAuthenticated]
     
-    # Buscar o crear usuario
-    user, created = User.objects.get_or_create(
-        username=username,
-        defaults={
-            'first_name': name.strip(),
-            'email': f'{username}@demo.com',
-        }
-    )
-    
-    # Si el usuario no tiene contraseña, asignar una por defecto
-    if not user.has_usable_password():
-        user.set_password('demo123')
+    def post(self, request):
+        user = request.user
+        old_password = request.data.get('old_password')
+        new_password = request.data.get('new_password')
+        
+        if not old_password or not new_password:
+            return Response({
+                'error': 'Se requiere contraseña actual y nueva.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not user.check_password(old_password):
+            return Response({
+                'error': 'Contraseña actual incorrecta.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            from django.contrib.auth.password_validation import validate_password
+            validate_password(new_password, user)
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        user.set_password(new_password)
         user.save()
-    
-    # Generar tokens JWT
-    refresh = RefreshToken.for_user(user)
-    
-    return Response({
-        'user': UserSerializer(user).data,
-        'refresh': str(refresh),
-        'access': str(refresh.access_token),
-    }, status=status.HTTP_200_OK)
+        
+        return Response({
+            'message': 'Contraseña actualizada exitosamente.'
+        }, status=status.HTTP_200_OK)
