@@ -100,7 +100,7 @@ Una plataforma **100% gratuita, accesible 24/7** con:
 | ![Python](https://img.shields.io/badge/Python-3.11-blue?logo=python) | 3.11+ | Lenguaje principal |
 | ![Django](https://img.shields.io/badge/Django-5.2.7-green?logo=django) | 5.2.7 | Framework web |
 | ![DRF](https://img.shields.io/badge/DRF-3.16.1-red) | 3.16.1 | API REST |
-| ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue?logo=postgresql) | 15+ | Base de datos |
+| ![SQLite](https://img.shields.io/badge/SQLite-07405E?style=flat&compact=true&logo=sqlite&logoColor=white) | 15+ | Base de datos |
 | ![JWT](https://img.shields.io/badge/JWT-5.5.1-black) | 5.5.1 | Autenticación |
 | ![Gemini](https://img.shields.io/badge/Gemini-0.8.5-blue?logo=google) | 0.8.5 | IA Chatbot |
 
@@ -121,8 +121,7 @@ Una plataforma **100% gratuita, accesible 24/7** con:
 | **pytest** | Testing backend |
 | **Jest** | Testing frontend |
 | **Git/GitHub** | Control de versiones |
-| **Vercel** | Deploy frontend |
-| **Railway** | Deploy backend + DB |
+
 
 ---
 
@@ -155,7 +154,6 @@ Asegúrate de tener instalado:
 
 - **Python 3.11+** - [Descargar](https://www.python.org/downloads/)
 - **Node.js 18+** y npm - [Descargar](https://nodejs.org/)
-- **PostgreSQL 15+** - [Descargar](https://www.postgresql.org/download/)
 - **Git** - [Descargar](https://git-scm.com/)
 - **Google Gemini API Key** - [Obtener](https://makersuite.google.com/app/apikey)
 
